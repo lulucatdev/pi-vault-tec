@@ -715,6 +715,28 @@ export default function vaultTecExtension(pi: ExtensionAPI): void {
     },
   });
 
+  pi.registerCommand("vault-tec-title", {
+    description: "Set the Vault-Tec header title (e.g., /vault-tec-title My Title).",
+    handler: async (args, ctx) => {
+      const value = args.trim() || "PI-BOY 3000";
+      settings = { ...settings, headerTitle: value };
+      persistSessionSettings();
+      refreshUi(ctx);
+      ctx.ui.notify(`Header title set to: ${value}`, "info");
+    },
+  });
+
+  pi.registerCommand("vault-tec-subtitle", {
+    description: "Set the Vault-Tec header subtitle (e.g., /vault-tec-subtitle My Subtitle).",
+    handler: async (args, ctx) => {
+      const value = args.trim() || "VAULT-TEC TERMINAL INTERFACE";
+      settings = { ...settings, headerSubtitle: value };
+      persistSessionSettings();
+      refreshUi(ctx);
+      ctx.ui.notify(`Header subtitle set to: ${value}`, "info");
+    },
+  });
+
   pi.on("session_start", async (_event, ctx) => {
     busy = false;
     turnCount = 0;
