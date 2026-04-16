@@ -312,17 +312,10 @@ function buildHeaderLogo(
     ];
   }
 
-  const innerWidth = Math.min(width - 4, Math.max(title.length, subtitle.length) + 8);
-  const top = centerStyled(theme.fg("accent", `╔${"═".repeat(innerWidth)}╗`), width);
-  const titleLine = centerStyled(
-    theme.fg("accent", `║${centerPlain(title, innerWidth)}║`),
-    width,
-  );
-  const subtitleLine = centerStyled(
-    theme.fg("muted", `║${centerPlain(subtitle, innerWidth)}║`),
-    width,
-  );
-  const bottom = centerStyled(theme.fg("accent", `╚${"═".repeat(innerWidth)}╝`), width);
+  const top = theme.fg("accent", "═".repeat(width));
+  const titleLine = centerStyled(theme.fg("accent", title), width);
+  const subtitleLine = centerStyled(theme.fg("muted", subtitle), width);
+  const bottom = theme.fg("accent", "═".repeat(width));
 
   return [top, titleLine, subtitleLine, bottom].map((line) => truncateToWidth(line, width));
 }
