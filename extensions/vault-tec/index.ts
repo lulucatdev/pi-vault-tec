@@ -372,7 +372,7 @@ function buildTelemetryLines(
   const contextTokens = usage?.tokens === null || usage?.tokens === undefined ? "n/a" : formatTokens(usage.tokens);
   const contextWindow = usage ? formatTokens(usage.contextWindow) : "n/a";
   const modelLineSuffix = thinkingLevel ? ` | ${thinkingLevel}` : "";
-  const autoCompactSuffix = isAutoCompactionEnabled(ctx.cwd) ? theme.fg("accent", " | AUTO") : "";
+  const autoCompactSuffix = isAutoCompactionEnabled(ctx.cwd) ? theme.fg("accent", " |  AUTO") : "";
   const workspaceLabel = branch ? `${withHomeTilde(ctx.cwd)} (${branch})` : withHomeTilde(ctx.cwd);
   const trafficLabel =
     theme.fg("warning", "↑") +
@@ -388,10 +388,9 @@ function buildTelemetryLines(
     truncateToWidth(theme.fg("accent", headerTitle) + theme.fg("muted", ` | ${model}${modelLineSuffix}`), width),
     truncateToWidth(
       theme.fg("warning", "CTX ") +
-        theme.fg("text", `[${progressBar(contextRatio)}] ${contextLabel}`) +
+        theme.fg("text", `${contextLabel} ${contextTokens}/${contextWindow}`) +
         theme.fg("muted", " | ") +
         trafficLabel +
-        theme.fg("muted", ` | ${contextTokens}/${contextWindow}`) +
         autoCompactSuffix,
       width,
     ),
