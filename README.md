@@ -81,7 +81,7 @@ pi uninstall https://github.com/lulucatdev/pi-cat
 After installation, the package can automatically:
 
 - switch pi to the bundled `cat` theme;
-- replace the default header with a centered cat banner;
+- replace the default header with a centered cat header;
 - optionally append a light cat terminal persona to the system prompt;
 - show a telemetry panel below the editor with provider, model, thinking level, context usage, token counters, and workspace path;
 - suppress the default lower-footer clutter with a custom footer override.
