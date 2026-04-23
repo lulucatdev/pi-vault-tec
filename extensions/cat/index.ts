@@ -771,4 +771,22 @@ export default function catExtension(pi: ExtensionAPI): void {
   pi.on("model_select", async (_event, ctx) => {
     refreshUi(ctx);
   });
+
+  // Clear every TUI surface this extension registered before the runtime is
+  // torn down. Without this, the header/widget/footer factories remain in the
+  // TUI and continue to fire `render()` via pending timers. Those closures
+  // capture `pi` and `ctx`, which the loader marks stale after shutdown, so
+  // calls such as `pi.getThinkingLevel()` or `ctx.getContextUsage()` throw
+  //   Error: This extension instance is stale after session replacement or reload.
+  // and crash pi on quit, /reload, /new, /resume, or /fork.
+  pi.on("session_shutdown", async (_event, ctx) => {
+    if (!ctx.hasUI) return;
+    ctx.ui.setHeader(undefined);
+    ctx.ui.setWidget("cat-telemetry", undefined);
+    ctx.ui.setFooter(undefined);
+    if (previousThemeName && ctx.ui.theme.name === THEME_NAME) {
+      ctx.ui.setTheme(previousThemeName);
+      previousThemeName = undefined;
+    }
+  });
 }
