@@ -26,7 +26,7 @@ const PROJECT_CONFIG_RELATIVE_PATH = ".pi/pi-cat.json";
 const GLOBAL_CONFIG_PATH = join(getAgentDir(), "pi-cat.json");
 const PROMPT_TEXT = readFileSync(new URL("./prompt.txt", import.meta.url), "utf8").trim();
 const PROMPT_MARKER = "CAT TERMINAL ACTIVE";
-const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const SPINNER_FRAMES = ["✶", "✸", "✹", "✺", "✹", "✸"];
 
 let _spinnerFrame = 0;
 let _spinnerTimer: ReturnType<typeof setInterval> | null = null;
