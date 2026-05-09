@@ -9,7 +9,7 @@ import {
   type ExtensionAPI,
   type ExtensionCommandContext,
   type ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   Container,
   type SettingItem,
@@ -18,7 +18,7 @@ import {
   Text,
   truncateToWidth,
   visibleWidth,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 
 const THEME_NAME = "cat";
 const SETTINGS_ENTRY_TYPE = "pi-cat-settings";
@@ -26,6 +26,27 @@ const PROJECT_CONFIG_RELATIVE_PATH = ".pi/pi-cat.json";
 const GLOBAL_CONFIG_PATH = join(getAgentDir(), "pi-cat.json");
 const PROMPT_TEXT = readFileSync(new URL("./prompt.txt", import.meta.url), "utf8").trim();
 const PROMPT_MARKER = "CAT TERMINAL ACTIVE";
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+let _spinnerFrame = 0;
+let _spinnerTimer: ReturnType<typeof setInterval> | null = null;
+let _spinnerTui: { requestRender(): void } | null = null;
+
+function startSpinner(): void {
+  if (_spinnerTimer) return;
+  _spinnerFrame = 0;
+  _spinnerTimer = setInterval(() => {
+    _spinnerFrame = (_spinnerFrame + 1) % SPINNER_FRAMES.length;
+    _spinnerTui?.requestRender();
+  }, 80);
+}
+
+function stopSpinner(): void {
+  if (_spinnerTimer) {
+    clearInterval(_spinnerTimer);
+    _spinnerTimer = null;
+  }
+}
 
 const HEADER_HOME = [
   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⡶⠶⠶⢶⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
@@ -425,19 +446,26 @@ function applyWidgets(
   settings: CatSettings,
   branch: string | null,
   getThinkingLevel: () => string,
+  getDisplayTitle: () => string,
 ): void {
   if (!ctx.hasUI) return;
 
   if (settings.enabled && settings.telemetry) {
     ctx.ui.setWidget(
       "cat-telemetry",
-      (_tui, theme) => ({
-        invalidate() {},
-        render(width: number): string[] {
-          const thinkingLevel = getThinkingLevel();
-          return buildTelemetryLines(ctx, theme, branch, thinkingLevel, width, settings.headerTitle);
-        },
-      }),
+      (tui, theme) => {
+        _spinnerTui = tui;
+        return {
+          dispose() {
+            if (_spinnerTui === tui) _spinnerTui = null;
+          },
+          invalidate() {},
+          render(width: number): string[] {
+            const thinkingLevel = getThinkingLevel();
+            return buildTelemetryLines(ctx, theme, branch, thinkingLevel, width, getDisplayTitle());
+          },
+        };
+      },
       { placement: "belowEditor" },
     );
   } else {
@@ -579,15 +607,17 @@ export default function catExtension(pi: ExtensionAPI): void {
   let currentBranch: string | null = null;
   let previousThemeName: string | undefined;
   let themeWarningShown = false;
-
   const readThinkingLevel = (ctx: ExtensionContext): string => {
     return pi.getThinkingLevel() ?? getThinkingLevelFromSession(ctx) ?? "off";
   };
 
+  const getDisplayTitle = (): string =>
+    busy ? SPINNER_FRAMES[_spinnerFrame] : settings.headerTitle;
+
   const setCurrentBranch = (ctx: ExtensionContext, branch: string | null): void => {
     if (currentBranch === branch) return;
     currentBranch = branch;
-    applyWidgets(ctx, settings, currentBranch, () => readThinkingLevel(ctx));
+    applyWidgets(ctx, settings, currentBranch, () => readThinkingLevel(ctx), getDisplayTitle);
   };
 
   const refreshUi = (ctx: ExtensionContext): void => {
@@ -601,7 +631,7 @@ export default function catExtension(pi: ExtensionAPI): void {
     }
 
     applyHeader(ctx, settings);
-    applyWidgets(ctx, settings, currentBranch, () => readThinkingLevel(ctx));
+    applyWidgets(ctx, settings, currentBranch, () => readThinkingLevel(ctx), getDisplayTitle);
     applyFooter(ctx, settings, (branch) => setCurrentBranch(ctx, branch));
   };
 
@@ -733,6 +763,8 @@ export default function catExtension(pi: ExtensionAPI): void {
     turnCount = 0;
     currentBranch = null;
     themeWarningShown = false;
+    stopSpinner();
+    _spinnerFrame = 0;
     await restoreSettings(ctx);
     refreshUi(ctx);
   });
@@ -754,17 +786,20 @@ export default function catExtension(pi: ExtensionAPI): void {
   pi.on("turn_start", async (_event, ctx) => {
     busy = true;
     turnCount += 1;
+    startSpinner();
     applyFooter(ctx, settings, (branch) => setCurrentBranch(ctx, branch));
   });
 
   pi.on("turn_end", async (_event, ctx) => {
     busy = false;
+    stopSpinner();
     refreshUi(ctx);
   });
 
   pi.on("agent_end", async (_event, ctx) => {
     busy = false;
-    applyWidgets(ctx, settings, currentBranch, () => readThinkingLevel(ctx));
+    stopSpinner();
+    applyWidgets(ctx, settings, currentBranch, () => readThinkingLevel(ctx), getDisplayTitle);
     applyFooter(ctx, settings, (branch) => setCurrentBranch(ctx, branch));
   });
 
@@ -780,6 +815,7 @@ export default function catExtension(pi: ExtensionAPI): void {
   //   Error: This extension instance is stale after session replacement or reload.
   // and crash pi on quit, /reload, /new, /resume, or /fork.
   pi.on("session_shutdown", async (_event, ctx) => {
+    stopSpinner();
     if (!ctx.hasUI) return;
     ctx.ui.setHeader(undefined);
     ctx.ui.setWidget("cat-telemetry", undefined);
